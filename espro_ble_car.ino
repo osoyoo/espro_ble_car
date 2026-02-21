@@ -30,12 +30,57 @@ bool deviceConnected = false;
 #define speedPinL 17    // Left PWM pin connect MODEL-X ENB
 #define LeftMotorDirPin1  26    //Left Motor direction pin 1 to MODEL-X IN3
 #define LeftMotorDirPin2  27   //Left Motor direction pin 1 to MODEL-X IN4
-#define SPEED 140
-#define RIGHT_SPEED 140
+#define TURN_SPEED 80
+int SPEED=0;
+// Command structure
+struct Command {
+  char action;       // M, B, L, R, X, Y, E
+  int direction;     // -2, -1, 0, 1, 2
+  int speed;         // 0-240
+  int gear;          // 0 or 1
+};
+bool parseCommand(String commandStr, Command &cmd) {
+  int commaIndex1 = commandStr.indexOf(',');
+  int commaIndex2 = commandStr.indexOf(',', commaIndex1 + 1);
+  int commaIndex3 = commandStr.indexOf(',', commaIndex2 + 1);
 
+  if (commaIndex1 == -1 || commaIndex2 == -1 || commaIndex3 == -1) {
+    Serial.println("Error: Invalid command format");
+    return false;
+  }
 
+  // Parse action field
+  String actionStr = commandStr.substring(0, commaIndex1);
+  actionStr.trim();
+  if (actionStr.length() > 0) {
+    cmd.action = actionStr.charAt(0);
+  } else {
+    return false;
+  }
+
+  // Parse direction field
+  String directionStr = commandStr.substring(commaIndex1 + 1, commaIndex2);
+  directionStr.trim();
+  cmd.direction = directionStr.toInt();
+
+  // Parse speed field
+  String speedStr = commandStr.substring(commaIndex2 + 1, commaIndex3);
+  speedStr.trim();
+  cmd.speed = speedStr.toInt();
+
+  // Parse gear field
+  String gearStr = commandStr.substring(commaIndex3 + 1);
+  gearStr.trim();
+  cmd.gear = gearStr.toInt();
+
+  // Validate speed range
+  if (cmd.speed < 0) cmd.speed = 0;
+  if (cmd.speed > 240) cmd.speed = 240;
+
+  return true;
+}
 /*motor control*/
-void go_Advance(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Forward
+void go_Advance(int L_SPEED=0,int R_SPEED=0)  //Forward
 {
   digitalWrite(RightMotorDirPin1, HIGH);
   digitalWrite(RightMotorDirPin2,LOW);
@@ -44,7 +89,7 @@ void go_Advance(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Forward
   analogWrite(speedPinL,L_SPEED);
   analogWrite(speedPinR,R_SPEED);
 }
-void go_Left(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Turn left
+void go_Left(int L_SPEED=TURN_SPEED,int R_SPEED=TURN_SPEED)  //Turn left
 {
   digitalWrite(RightMotorDirPin1, HIGH);
   digitalWrite(RightMotorDirPin2,LOW);
@@ -53,7 +98,7 @@ void go_Left(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Turn left
   analogWrite(speedPinL,L_SPEED);
   analogWrite(speedPinR,R_SPEED);
 }
-void go_Right(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Turn right
+void go_Right(int L_SPEED=TURN_SPEED,int R_SPEED=TURN_SPEED)  //Turn right
 {
   digitalWrite(RightMotorDirPin1, LOW);
   digitalWrite(RightMotorDirPin2,HIGH);
@@ -62,7 +107,7 @@ void go_Right(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Turn right
   analogWrite(speedPinL,L_SPEED);
   analogWrite(speedPinR,R_SPEED);
 }
-void go_Back(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Reverse
+void go_Back(int L_SPEED=0,int R_SPEED=0)  //Reverse
 {
   digitalWrite(RightMotorDirPin1, LOW);
   digitalWrite(RightMotorDirPin2,HIGH);
@@ -71,7 +116,7 @@ void go_Back(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Reverse
   analogWrite(speedPinL,L_SPEED);
   analogWrite(speedPinR,R_SPEED);
 }
-void go_BackLeft(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Reverse and turn left
+void go_BackLeft(int L_SPEED=TURN_SPEED,int R_SPEED=TURN_SPEED)  //Reverse and turn left
 {
   digitalWrite(RightMotorDirPin1, LOW);
   digitalWrite(RightMotorDirPin2,HIGH);
@@ -80,7 +125,7 @@ void go_BackLeft(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Reverse and turn left
   analogWrite(speedPinL,L_SPEED);
   analogWrite(speedPinR,R_SPEED);
 }
-void go_BackRight(int L_SPEED=SPEED,int R_SPEED=SPEED)  //Reverse and turn right
+void go_BackRight(int L_SPEED=TURN_SPEED,int R_SPEED=TURN_SPEED)  //Reverse and turn right
 {
   digitalWrite(RightMotorDirPin1, HIGH);
   digitalWrite(RightMotorDirPin2,LOW);
@@ -127,18 +172,23 @@ class MyServerCallbacks: public BLEServerCallbacks {
 class MyCallbacks: public BLECharacteristicCallbacks {
     void onWrite(BLECharacteristic *pCharacteristic) {
       String value = pCharacteristic->getValue().c_str();
-
+      Command cmd;
+      if (!parseCommand(value, cmd)) {
+          Serial.println("Failed to parse command");
+          return;
+      }
       if (value.length() > 0) {
-        char command = value[0];
+        char command = cmd.action;
+        SPEED=cmd.speed;
         Serial.print("Received command: ");
         Serial.println(command);
 
         switch(command) {
           case 'M':  // Move forward
-            go_Advance();
+            go_Advance(SPEED,SPEED);
             break;
           case 'B':  // Move backward
-            go_Back();
+            go_Back(SPEED,SPEED);
             break;
           case 'L':  // Turn left
             go_Left();
