@@ -3,8 +3,8 @@
  *| |_| |___ | |_| | |_| | |_| | |_| ( (__| |_| | | | |
  * \___/(___/ \___/ \__  |\___/ \___(_)____)___/|_|_|_|
  *                  (____/
- * Arduino Smart Car Tutorial Lesson 1
- * Tutorial URL https://osoyoo.com/?p=11370
+ * ESPRO Bluetooth Mock Driving Robot Car
+ * Tutorial URL https://osoyoo.com/?p=61159
  * CopyRight www.osoyoo.com
  *
  * Modified to add BLE (Bluetooth Low Energy) control functionality
